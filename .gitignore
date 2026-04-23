@@ -1,0 +1,10 @@
+# Ignorar banco do Xapian
+db/
+
+# Ignorar cache do Python
+__pycache__/
+
+# Opcional (recomendado)
+#*.pyc
+#*.pyo
+#*.pkl
