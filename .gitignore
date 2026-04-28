@@ -4,6 +4,10 @@ db/
 # Ignorar cache do Python
 __pycache__/
 
+# Outros
+folha/
+resultados.csv/
+
 # Opcional (recomendado)
 #*.pyc
 #*.pyo
