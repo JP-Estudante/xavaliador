@@ -6,7 +6,7 @@ __pycache__/
 
 # Outros
 folha/
-resultados.csv/
+resultados.csv
 
 # Opcional (recomendado)
 #*.pyc

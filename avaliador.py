@@ -1,6 +1,19 @@
 # formato: qid 0 docid relevance
 import csv
+import os
+import subprocess
+import sys
 from collections import defaultdict
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+os.chdir(BASE_DIR)
+
+db_path = BASE_DIR / "db"
+if not db_path.exists() or not any(db_path.iterdir()):
+    subprocess.run([sys.executable, "scripts/indexar_documentos.py"], check=True)
+
+subprocess.run([sys.executable, "scripts/executar_consultas.py"], check=True)
 
 # carregar qrels
 qrels = defaultdict(dict)
