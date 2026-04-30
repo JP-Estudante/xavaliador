@@ -10,10 +10,13 @@ BASE_DIR = Path(__file__).resolve().parent
 os.chdir(BASE_DIR)
 
 db_path = BASE_DIR / "db"
-if not db_path.exists() or not any(db_path.iterdir()):
-    subprocess.run([sys.executable, "scripts/indexar_documentos.py"], check=True)
+csv_entrada = sys.argv[1] if len(sys.argv) > 1 else "resultados.csv"
 
-subprocess.run([sys.executable, "scripts/executar_consultas.py"], check=True)
+if len(sys.argv) == 1:
+    if not db_path.exists() or not any(db_path.iterdir()):
+        subprocess.run([sys.executable, "scripts/indexar_documentos.py"], check=True)
+
+    subprocess.run([sys.executable, "scripts/executar_consultas.py"], check=True)
 
 # carregar qrels
 qrels = defaultdict(dict)
@@ -26,12 +29,12 @@ with open("folha/avaliacao.txt", "r") as f:
 # carregar resultados
 results = defaultdict(list)
 
-with open("resultados.csv", "r") as f:
+with open(csv_entrada, "r") as f:
     reader = csv.DictReader(f)
     for row in reader:
-        qid = row["query_id"]
-        docid = row["doc_id"]
-        rank = int(row["rank"])
+        qid = row["ID da consulta"]
+        docid = row["ID do documento"]
+        rank = int(row["ordem no ranking"])
 
         results[qid].append((rank, docid))
 
@@ -55,17 +58,17 @@ def average_precision(qid):
     total_rel = sum(rel_docs.values())
 
     if total_rel == 0:
-        return 0
+        return 0, num_rel, total_rel
 
-    return sum_prec / total_rel
+    return sum_prec / total_rel, num_rel, total_rel
 
 # calcular MAP
 aps = []
 
 for qid in results:
-    ap = average_precision(qid)
+    ap, num_rel, total_rel = average_precision(qid)
     aps.append(ap)
-    print(f"Consulta {qid} → AP = {ap:.4f}")
+    print(f"Consulta {qid} → relevantes recuperados = {num_rel}/{total_rel} | AP = {ap:.4f}")
 
 MAP = sum(aps) / len(aps)
 
