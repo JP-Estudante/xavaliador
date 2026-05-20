@@ -10,6 +10,7 @@ folha/
 folha
 saida/*
 !saida/.gitkeep
+AGENTS.md
 
 # Opcional (recomendado)
 #*.pyc
