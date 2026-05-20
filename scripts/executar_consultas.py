@@ -1,6 +1,12 @@
 import xapian
 import xml.etree.ElementTree as ET
 import csv
+import os
+from nltk.corpus import stopwords
+
+os.chdir(os.path.dirname(os.path.dirname(__file__)))
+
+os.makedirs("saida", exist_ok=True)
 
 db = xapian.Database("db")
 
@@ -10,11 +16,19 @@ qp.set_database(db)
 # Sem stemming (configuração padrão)
 qp.set_default_op(xapian.Query.OP_OR)
 
+# Configurar as stopwords
+stopper = xapian.SimpleStopper()
+
+for w in stopwords.words("portuguese"):
+    stopper.add(w)
+
+qp.set_stopper(stopper)
+
 # Ler XML de tópicos
 tree = ET.parse("folha/topicos.xml")
 root = tree.getroot()
 
-topics = root.findall(".//top")[:10]
+topics = root.findall(".//top")
 
 results = []
 
@@ -40,9 +54,9 @@ for top in topics:
         rank += 1
 
 # salvar CSV
-with open("resultados.csv", "w", newline="", encoding="utf-8") as f:
+with open("saida/resultados.csv", "w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
     writer.writerow(["ID da consulta", "ID do documento", "ordem no ranking", "score"])
     writer.writerows(results)
 
-print("Consultas executadas e salvas!")
+print("Consultas executadas e salvas em saida/resultados.csv!")
