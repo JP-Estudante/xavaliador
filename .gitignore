@@ -3,10 +3,13 @@ db/
 
 # Ignorar cache do Python
 __pycache__/
+.venv/
 
 # Outros
 folha/
-resultados.csv
+folha
+saida/*
+!saida/.gitkeep
 
 # Opcional (recomendado)
 #*.pyc
