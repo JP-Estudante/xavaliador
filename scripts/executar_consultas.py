@@ -13,10 +13,10 @@ db = xapian.Database("db")
 qp = xapian.QueryParser()
 qp.set_database(db)
 
-# Sem stemming (configuração padrão)
+# Modelo vetorial usando OR como antes
 qp.set_default_op(xapian.Query.OP_OR)
 
-# Configurar as stopwords
+# Melhor configuracao anterior: remocao de stopwords
 stopper = xapian.SimpleStopper()
 
 for w in stopwords.words("portuguese"):
@@ -24,7 +24,12 @@ for w in stopwords.words("portuguese"):
 
 qp.set_stopper(stopper)
 
-# Ler XML de tópicos
+# Atividade 14.7: adicionar stemming em portugues
+stemmer = xapian.Stem("portuguese")
+qp.set_stemmer(stemmer)
+qp.set_stemming_strategy(xapian.QueryParser.STEM_SOME)
+
+# Ler XML de topicos
 tree = ET.parse("folha/topicos.xml")
 root = tree.getroot()
 
@@ -41,7 +46,7 @@ for top in topics:
     enquire = xapian.Enquire(db)
     enquire.set_query(query)
 
-    # TF-IDF clássico
+    # TF-IDF classico
     enquire.set_weighting_scheme(xapian.TfIdfWeight())
 
     matches = enquire.get_mset(0, 100)

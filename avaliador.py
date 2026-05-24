@@ -8,6 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from scripts.dados_13_4 import AVPS_13_4, TEMPO_CONSULTA_13_4, TEMPO_INDEXACAO_13_4
+from scripts.dados_13_5 import AVPS_13_5, TEMPO_CONSULTA_13_5, TEMPO_INDEXACAO_13_5
 from scripts.gerar_planilha import formula, gerar_planilha, gerar_zip, ler_tempos_planilha, p_valor_t_pareado
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -111,9 +112,9 @@ tempo_consultas = ""
 if len(sys.argv) == 1:
     tempo_indexacao, tempo_consultas = executar_pipeline()
 else:
-    tempos_135 = ler_tempos_planilha(planilha_saida)
-    tempo_indexacao = tempos_135.get("Tempo para indexar (s)", "")
-    tempo_consultas = tempos_135.get("Tempo para consultar (s)", "")
+    tempos_147 = ler_tempos_planilha(planilha_saida)
+    tempo_indexacao = tempos_147.get("Tempo para indexar (s)", "")
+    tempo_consultas = tempos_147.get("Tempo para consultar (s)", "")
 
 consultas = carregar_consultas()
 qrels = carregar_qrels()
@@ -121,32 +122,36 @@ resultados = carregar_resultados(csv_entrada)
 
 linhas_consultas = []
 aps = []
+aps_135 = []
 aps_134 = []
 
 for i, qid in enumerate(consultas):
     linha = i + 8
     ap, num_rel, total_rel = average_precision(qid, qrels, resultados)
+    ap_135 = AVPS_13_5[i]
     ap_134 = AVPS_13_4[i]
 
     aps.append(ap)
+    aps_135.append(ap_135)
     aps_134.append(ap_134)
-    linhas_consultas.append([qid, ap, ap_134, formula(f"B{linha}-C{linha}", ap - ap_134), num_rel, total_rel])
+    linhas_consultas.append([qid, ap, ap_135, formula(f"B{linha}-C{linha}", ap - ap_135), ap_134, num_rel, total_rel])
 
     print(f"Consulta {qid} -> relevantes recuperados = {num_rel}/{total_rel} | AvP = {ap:.4f}")
 
 mapa = sum(aps) / len(aps)
+mapa_135 = sum(aps_135) / len(aps_135)
 mapa_134 = sum(aps_134) / len(aps_134)
-p_valor = p_valor_t_pareado(aps, aps_134)
+p_valor = p_valor_t_pareado(aps, aps_135)
 ultima_linha = 7 + len(consultas)
 
 linhas_planilha = [
-    ["Metrica", "13.5 com remocao de stopwords", "13.4 sem remocao de stopwords"],
-    ["MAP", formula(f"AVERAGE(B8:B{ultima_linha})", mapa), formula(f"AVERAGE(C8:C{ultima_linha})", mapa_134)],
-    ["Tempo para indexar (s)", tempo_indexacao, TEMPO_INDEXACAO_13_4],
-    ["Tempo para consultar (s)", tempo_consultas, TEMPO_CONSULTA_13_4],
-    ["p-valor teste-t AvP", formula(f"T.TEST(B8:B{ultima_linha},C8:C{ultima_linha},2,1)", p_valor), ""],
+    ["Metrica", "14.7 stopwords + stemming", "13.5 stopwords", "13.4 sem stopwords"],
+    ["MAP", formula(f"AVERAGE(B8:B{ultima_linha})", mapa), formula(f"AVERAGE(C8:C{ultima_linha})", mapa_135), formula(f"AVERAGE(E8:E{ultima_linha})", mapa_134)],
+    ["Tempo para indexar (s)", tempo_indexacao, TEMPO_INDEXACAO_13_5, TEMPO_INDEXACAO_13_4],
+    ["Tempo para consultar (s)", tempo_consultas, TEMPO_CONSULTA_13_5, TEMPO_CONSULTA_13_4],
+    ["p-valor teste-t AvP 14.7 x 13.5", formula(f"T.TEST(B8:B{ultima_linha},C8:C{ultima_linha},2,1)", p_valor), "", ""],
     [],
-    ["ID da consulta", "AvP 13.5", "AvP 13.4", "Diferenca", "Relevantes recuperados", "Total relevantes"],
+    ["ID da consulta", "AvP 14.7", "AvP 13.5", "Diferenca", "AvP 13.4", "Relevantes recuperados", "Total relevantes"],
 ]
 linhas_planilha.extend(linhas_consultas)
 
@@ -154,7 +159,8 @@ gerar_planilha(linhas_planilha, planilha_saida)
 gerar_zip(csv_entrada, planilha_saida, zip_saida)
 
 print(f"\nMAP = {mapa:.4f}")
+print(f"MAP 13.5 = {mapa_135:.4f}")
 print(f"MAP 13.4 = {mapa_134:.4f}")
-print(f"p-valor teste-t = {p_valor}")
+print(f"p-valor teste-t 14.7 x 13.5 = {p_valor}")
 print(f"Planilha salva em: {planilha_saida}")
 print(f"Arquivo compactado salvo em: {zip_saida}")

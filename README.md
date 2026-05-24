@@ -1,4 +1,4 @@
-# Recuperacao de Informacao - Trabalho 2
+# Recuperacao de Informacao - Atividade 14.7
 
 1-) criar e ativar o ambiente:
 
@@ -36,7 +36,17 @@ folha/publico95/
 python avaliador.py
 ```
 
-6-) arquivos gerados:
+6-) configuracao usada:
+
+```text
+modelo vetorial
+remocao de stopwords em portugues
+stemming em portugues
+ate 100 documentos por consulta
+todas as consultas
+```
+
+7-) arquivos gerados:
 
 ```text
 saida/resultados.csv

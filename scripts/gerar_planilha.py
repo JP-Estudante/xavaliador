@@ -32,6 +32,208 @@ def valor_celula(valor):
     return f'<is><t>{escape(str(valor))}</t></is>'
 
 
+def valor_para_largura(valor):
+    if isinstance(valor, dict) and "valor" in valor:
+        valor = valor["valor"]
+
+    return str(valor)
+
+
+def larguras_colunas(linhas):
+    max_colunas = max(len(linha) for linha in linhas)
+    larguras = []
+
+    for col_idx in range(max_colunas):
+        maior = 0
+
+        for linha in linhas:
+            if col_idx < len(linha):
+                maior = max(maior, len(valor_para_largura(linha[col_idx])))
+
+        largura = min(max(maior + 2, 12), 32)
+        larguras.append(largura)
+
+    return "".join(
+        f'<col min="{i}" max="{i}" width="{largura}" customWidth="1"/>'
+        for i, largura in enumerate(larguras, start=1)
+    )
+
+
+def estilo_celula(row_idx, col_idx, valor):
+    if row_idx in (1, 7):
+        return 1
+
+    if row_idx <= 5 and col_idx == 1:
+        return 2
+
+    if row_idx >= 8 and col_idx in (6, 7):
+        return 5
+
+    if isinstance(valor, (int, float)) or isinstance(valor, dict):
+        return 4
+
+    if valor != "":
+        return 3
+
+    return 0
+
+
+def estilos_planilha():
+    return """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <numFmts count="1">
+    <numFmt numFmtId="164" formatCode="0.0000"/>
+  </numFmts>
+  <fonts count="2">
+    <font><sz val="11"/><name val="Calibri"/></font>
+    <font><b/><sz val="11"/><name val="Calibri"/></font>
+  </fonts>
+  <fills count="3">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="2">
+    <border><left/><right/><top/><bottom/><diagonal/></border>
+    <border>
+      <left style="thin"><color rgb="FFBFBFBF"/></left>
+      <right style="thin"><color rgb="FFBFBFBF"/></right>
+      <top style="thin"><color rgb="FFBFBFBF"/></top>
+      <bottom style="thin"><color rgb="FFBFBFBF"/></bottom>
+      <diagonal/>
+    </border>
+  </borders>
+  <cellStyleXfs count="1">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+  </cellStyleXfs>
+  <cellXfs count="6">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+    <xf numFmtId="1" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+  </cellXfs>
+  <cellStyles count="1">
+    <cellStyle name="Normal" xfId="0" builtinId="0"/>
+  </cellStyles>
+</styleSheet>"""
+
+
+COMENTARIOS = [
+    (
+        "A2",
+        "MAP e a media das AvP das consultas. Quanto mais perto de 1, melhor o ranking; quanto mais perto de 0, pior.",
+    ),
+    (
+        "A5",
+        "p-valor do teste-t entre 14.7 e 13.5. Valor menor que 0.05 costuma indicar diferenca estatisticamente significativa.",
+    ),
+    (
+        "B5",
+        "Compara as AvP da configuracao 14.7 com a melhor configuracao anterior, 13.5.",
+    ),
+    (
+        "B7",
+        "AvP de cada consulta usando a configuracao 14.7: stopwords + stemming.",
+    ),
+    (
+        "C7",
+        "AvP de cada consulta na configuracao 13.5, que remove stopwords e foi a melhor configuracao anterior.",
+    ),
+    (
+        "D7",
+        "Diferenca calculada como AvP 14.7 menos AvP 13.5. Positivo indica melhora com stemming; negativo indica piora.",
+    ),
+    (
+        "E7",
+        "AvP de cada consulta na configuracao 13.4, sem remocao de stopwords e sem stemming.",
+    ),
+    (
+        "F7",
+        "Quantidade de documentos relevantes que apareceram entre os resultados recuperados da consulta.",
+    ),
+    (
+        "G7",
+        "Total de documentos relevantes existentes no arquivo de avaliacao para aquela consulta.",
+    ),
+]
+
+
+def comentarios_planilha():
+    comentarios_xml = []
+
+    for celula, texto in COMENTARIOS:
+        comentarios_xml.append(
+            f'<comment ref="{celula}" authorId="0">'
+            f'<text><r><t>{escape(texto)}</t></r></text>'
+            f'</comment>'
+        )
+
+    return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<comments xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <authors>
+    <author>Avaliador</author>
+  </authors>
+  <commentList>
+    {''.join(comentarios_xml)}
+  </commentList>
+</comments>"""
+
+
+def posicao_celula(celula):
+    letras = ""
+    numeros = ""
+
+    for char in celula:
+        if char.isalpha():
+            letras += char
+        else:
+            numeros += char
+
+    coluna = 0
+    for letra in letras:
+        coluna = coluna * 26 + (ord(letra.upper()) - 64)
+
+    return int(numeros) - 1, coluna - 1
+
+
+def desenho_comentarios():
+    shapes = []
+
+    for i, (celula, _) in enumerate(COMENTARIOS, start=1):
+        row, col = posicao_celula(celula)
+        shape_id = 1024 + i
+        anchor = f"{col + 1}, 15, {row}, 10, {col + 4}, 15, {row + 4}, 10"
+
+        shapes.append(f"""
+  <v:shape id="_x0000_s{shape_id}" type="#_x0000_t202" style="position:absolute;margin-left:{80 + col * 30}pt;margin-top:{20 + row * 12}pt;width:220pt;height:70pt;z-index:{i};visibility:hidden" fillcolor="#ffffe1" o:insetmode="auto">
+    <v:fill color2="#ffffe1"/>
+    <v:shadow on="t" color="black" obscured="t"/>
+    <v:path o:connecttype="none"/>
+    <v:textbox style="mso-direction-alt:auto"/>
+    <x:ClientData ObjectType="Note"><x:MoveWithCells/><x:SizeWithCells/><x:Anchor>{anchor}</x:Anchor><x:AutoFill>False</x:AutoFill><x:Row>{row}</x:Row><x:Column>{col}</x:Column></x:ClientData>
+  </v:shape>""")
+
+    return f"""<xml xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+  <o:shapelayout v:ext="edit">
+    <o:idmap v:ext="edit" data="1"/>
+  </o:shapelayout>
+  <v:shapetype id="_x0000_t202" coordsize="21600,21600" o:spt="202" path="m,l,21600r21600,l21600,xe">
+    <v:stroke joinstyle="miter"/>
+    <v:path gradientshapeok="t" o:connecttype="rect"/>
+  </v:shapetype>
+  {''.join(shapes)}
+</xml>"""
+
+def rels_planilha():
+    return """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="../comments1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing" Target="../drawings/vmlDrawing1.vml"/>
+</Relationships>"""
+
+
 def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
     rows_xml = []
 
@@ -43,15 +245,22 @@ def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
             tem_formula = isinstance(valor, dict) and "formula" in valor
             numero = isinstance(valor, (int, float)) and not isinstance(valor, bool)
             tipo = "" if tem_formula or numero else ' t="inlineStr"'
-            cells.append(f'<c r="{ref}"{tipo}>{valor_celula(valor)}</c>')
+            estilo = estilo_celula(row_idx, col_idx, valor)
+            estilo_xml = f' s="{estilo}"' if estilo else ""
+            cells.append(f'<c r="{ref}"{estilo_xml}{tipo}>{valor_celula(valor)}</c>')
 
-        rows_xml.append(f'<row r="{row_idx}">{"".join(cells)}</row>')
+        altura = ' ht="22" customHeight="1"' if row_idx in (1, 7) else ""
+        rows_xml.append(f'<row r="{row_idx}"{altura}>{"".join(cells)}</row>')
+
+    cols_xml = larguras_colunas(linhas)
 
     sheet_xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <cols>{cols_xml}</cols>
   <sheetData>
     {''.join(rows_xml)}
   </sheetData>
+  <legacyDrawing r:id="rId2"/>
 </worksheet>"""
 
     workbook_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -65,6 +274,7 @@ def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
     workbook_rels = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>"""
 
     root_rels = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -76,8 +286,11 @@ def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="vml" ContentType="application/vnd.openxmlformats-officedocument.vmlDrawing"/>
   <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
   <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  <Override PartName="/xl/comments1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"/>
 </Types>"""
 
     with zipfile.ZipFile(arquivo_saida, "w", compression=zipfile.ZIP_DEFLATED) as xlsx:
@@ -85,6 +298,10 @@ def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
         xlsx.writestr("_rels/.rels", root_rels)
         xlsx.writestr("xl/workbook.xml", workbook_xml)
         xlsx.writestr("xl/_rels/workbook.xml.rels", workbook_rels)
+        xlsx.writestr("xl/styles.xml", estilos_planilha())
+        xlsx.writestr("xl/comments1.xml", comentarios_planilha())
+        xlsx.writestr("xl/drawings/vmlDrawing1.vml", desenho_comentarios())
+        xlsx.writestr("xl/worksheets/_rels/sheet1.xml.rels", rels_planilha())
         xlsx.writestr("xl/worksheets/sheet1.xml", sheet_xml)
 
 

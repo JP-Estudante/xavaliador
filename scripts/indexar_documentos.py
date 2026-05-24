@@ -10,13 +10,18 @@ db = xapian.WritableDatabase("db", xapian.DB_CREATE_OR_OVERWRITE)
 termgen = xapian.TermGenerator()
 termgen.set_database(db)
 
-# Configurar as stopwords
+# Melhor configuracao anterior: remocao de stopwords
 stopper = xapian.SimpleStopper()
 
 for w in stopwords.words("portuguese"):
     stopper.add(w)
 
 termgen.set_stopper(stopper)
+
+# Atividade 14.7: adicionar stemming em portugues
+stemmer = xapian.Stem("portuguese")
+termgen.set_stemmer(stemmer)
+termgen.set_stemming_strategy(xapian.TermGenerator.STEM_SOME)
 
 def index_file(path):
     with open(path, "r", encoding="latin-1") as f:
@@ -39,7 +44,7 @@ def index_file(path):
         doc = xapian.Document()
         termgen.set_document(doc)
 
-        # Indexação padrão com remoção de stopwords
+        # Indexacao com stopwords + stemming
         termgen.index_text(text)
 
         doc.add_value(0, docno)
@@ -63,4 +68,4 @@ def index_directory(base_path):
 # Caminho raiz para indexar
 total_docs = index_directory("folha")
 
-print(f"Indexação concluída! Documentos indexados: {total_docs}")
+print(f"Indexacao concluida! Documentos indexados: {total_docs}")
