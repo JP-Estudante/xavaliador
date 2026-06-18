@@ -1,7 +1,8 @@
 import xapian
 import re
 import os
-from nltk.corpus import stopwords
+from lematizador import lematizar_texto
+from stopwords_pt import stopwords_portugues
 
 os.chdir(os.path.dirname(os.path.dirname(__file__)))
 
@@ -13,15 +14,10 @@ termgen.set_database(db)
 # Melhor configuracao anterior: remocao de stopwords
 stopper = xapian.SimpleStopper()
 
-for w in stopwords.words("portuguese"):
+for w in stopwords_portugues():
     stopper.add(w)
 
 termgen.set_stopper(stopper)
-
-# Atividade 14.7: adicionar stemming em portugues
-stemmer = xapian.Stem("portuguese")
-termgen.set_stemmer(stemmer)
-termgen.set_stemming_strategy(xapian.TermGenerator.STEM_SOME)
 
 def index_file(path):
     with open(path, "r", encoding="latin-1") as f:
@@ -44,8 +40,8 @@ def index_file(path):
         doc = xapian.Document()
         termgen.set_document(doc)
 
-        # Indexacao com stopwords + stemming
-        termgen.index_text(text)
+        # Atividade 15.5: indexar texto lematizado, sem stemming
+        termgen.index_text(lematizar_texto(text))
 
         doc.add_value(0, docno)
         doc.set_data(text)

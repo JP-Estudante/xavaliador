@@ -66,7 +66,7 @@ def estilo_celula(row_idx, col_idx, valor):
     if row_idx <= 5 and col_idx == 1:
         return 2
 
-    if row_idx >= 8 and col_idx in (6, 7):
+    if row_idx >= 8 and col_idx in (7, 8):
         return 5
 
     if isinstance(valor, (int, float)) or isinstance(valor, dict):
@@ -127,23 +127,23 @@ COMENTARIOS = [
     ),
     (
         "A5",
-        "p-valor do teste-t entre 14.7 e 13.5. Valor menor que 0.05 costuma indicar diferenca estatisticamente significativa.",
+        "p-valor do teste-t entre 15.5 e 13.5. Valor menor que 0.05 costuma indicar diferenca estatisticamente significativa.",
     ),
     (
         "B5",
-        "Compara as AvP da configuracao 14.7 com a melhor configuracao anterior, 13.5.",
+        "Compara as AvP da configuracao 15.5 com a melhor configuracao anterior sem stemming, 13.5.",
     ),
     (
         "B7",
-        "AvP de cada consulta usando a configuracao 14.7: stopwords + stemming.",
+        "AvP de cada consulta usando a configuracao 15.5: stopwords + lematizacao.",
     ),
     (
         "C7",
-        "AvP de cada consulta na configuracao 13.5, que remove stopwords e foi a melhor configuracao anterior.",
+        "AvP de cada consulta na configuracao 14.7, com stopwords e stemming.",
     ),
     (
         "D7",
-        "Diferenca calculada como AvP 14.7 menos AvP 13.5. Positivo indica melhora com stemming; negativo indica piora.",
+        "AvP de cada consulta na configuracao 13.5, que remove stopwords e foi a melhor configuracao anterior sem stemming.",
     ),
     (
         "E7",
@@ -151,10 +151,14 @@ COMENTARIOS = [
     ),
     (
         "F7",
-        "Quantidade de documentos relevantes que apareceram entre os resultados recuperados da consulta.",
+        "Diferenca calculada como AvP 15.5 menos AvP 13.5. Positivo indica melhora com lematizacao; negativo indica piora.",
     ),
     (
         "G7",
+        "Quantidade de documentos relevantes que apareceram entre os resultados recuperados da consulta.",
+    ),
+    (
+        "H7",
         "Total de documentos relevantes existentes no arquivo de avaliacao para aquela consulta.",
     ),
 ]

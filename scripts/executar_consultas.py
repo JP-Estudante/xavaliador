@@ -2,7 +2,8 @@ import xapian
 import xml.etree.ElementTree as ET
 import csv
 import os
-from nltk.corpus import stopwords
+from lematizador import lematizar_texto
+from stopwords_pt import stopwords_portugues
 
 os.chdir(os.path.dirname(os.path.dirname(__file__)))
 
@@ -19,15 +20,10 @@ qp.set_default_op(xapian.Query.OP_OR)
 # Melhor configuracao anterior: remocao de stopwords
 stopper = xapian.SimpleStopper()
 
-for w in stopwords.words("portuguese"):
+for w in stopwords_portugues():
     stopper.add(w)
 
 qp.set_stopper(stopper)
-
-# Atividade 14.7: adicionar stemming em portugues
-stemmer = xapian.Stem("portuguese")
-qp.set_stemmer(stemmer)
-qp.set_stemming_strategy(xapian.QueryParser.STEM_SOME)
 
 # Ler XML de topicos
 tree = ET.parse("folha/topicos.xml")
@@ -41,7 +37,7 @@ for top in topics:
     qid = top.find("num").text.strip()
     title = top.find("title").text.strip()
 
-    query = qp.parse_query(title)
+    query = qp.parse_query(lematizar_texto(title))
 
     enquire = xapian.Enquire(db)
     enquire.set_query(query)

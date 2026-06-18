@@ -1,0 +1,4 @@
+nltk
+
+# O modulo xapian precisa estar instalado no sistema.
+# Em distribuicoes Linux, normalmente vem de um pacote como python3-xapian.

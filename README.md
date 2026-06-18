@@ -1,4 +1,4 @@
-# Recuperacao de Informacao - Atividade 14.7
+# Recuperacao de Informacao - Atividade 15.5
 
 1-) criar e ativar o ambiente:
 
@@ -7,19 +7,13 @@ python -m venv --system-site-packages .venv
 source .venv/bin/activate
 ```
 
-2-) instalar a biblioteca nltk:
+2-) instalar as dependencias:
 
 ```bash
-pip install nltk
+pip install -r requirements.txt
 ```
 
-3-) baixar a lista de stopwords:
-
-```bash
-python dependecias.py
-```
-
-4-) garantir que a base esteja na pasta `folha/`:
+3-) garantir que a base esteja na pasta `folha/`:
 
 ```text
 folha/topicos.xml
@@ -30,23 +24,24 @@ folha/publico94/
 folha/publico95/
 ```
 
-5-) executar avaliacao completa:
+4-) executar avaliacao completa:
 
 ```bash
 python avaliador.py
 ```
 
-6-) configuracao usada:
+5-) configuracao usada:
 
 ```text
 modelo vetorial
 remocao de stopwords em portugues
-stemming em portugues
+lematizacao simples em portugues
+sem stemming
 ate 100 documentos por consulta
 todas as consultas
 ```
 
-7-) arquivos gerados:
+6-) arquivos gerados:
 
 ```text
 saida/resultados.csv
