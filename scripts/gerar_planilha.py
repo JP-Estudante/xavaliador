@@ -59,15 +59,25 @@ def larguras_colunas(linhas):
     )
 
 
-def estilo_celula(row_idx, col_idx, valor):
-    if row_idx in (1, 7):
+def estilo_celula(row_idx, col_idx, valor, ref="", celulas_negrito=None):
+    celulas_negrito = celulas_negrito or set()
+
+    if row_idx == 1:
         return 1
 
-    if row_idx <= 5 and col_idx == 1:
+    if ref in celulas_negrito:
         return 2
 
-    if row_idx >= 8 and col_idx in (7, 8):
-        return 5
+    if row_idx > 1 and col_idx == 1 and valor in (
+        "Melhor configuracao",
+        "Melhor configuração",
+        "Baseline",
+        "Decisao",
+        "Decisão",
+        "Regra de comparacao",
+        "Regra de comparação",
+    ):
+        return 2
 
     if isinstance(valor, (int, float)) or isinstance(valor, dict):
         return 4
@@ -122,52 +132,45 @@ def estilos_planilha():
 
 COMENTARIOS = [
     (
-        "A2",
-        "MAP e a media das AvP das consultas. Quanto mais perto de 1, melhor o ranking; quanto mais perto de 0, pior.",
+        "A1",
+        "Cada linha resume uma combinacao de pre-processamento e modelo de recuperacao.",
     ),
     (
-        "A5",
-        "p-valor do teste-t entre 15.5 e 13.5. Valor menor que 0.05 costuma indicar diferenca estatisticamente significativa.",
+        "C1",
+        "MAP e a media das AvP das consultas. Quanto mais perto de 1, melhor o ranking.",
     ),
     (
-        "B5",
-        "Compara as AvP da configuracao 15.5 com a melhor configuracao anterior sem stemming, 13.5.",
+        "D1",
+        "Tempo gasto para criar o indice Xapian daquela tecnica de pre-processamento.",
     ),
     (
-        "B7",
-        "AvP de cada consulta usando a configuracao 15.5: stopwords + lematizacao.",
+        "F1",
+        "Tempo medio de consulta: tempo total de consulta dividido pelo numero de consultas.",
     ),
     (
-        "C7",
-        "AvP de cada consulta na configuracao 14.7, com stopwords e stemming.",
+        "G1",
+        "Configuracao que era a melhor antes do experimento desta linha ser avaliado.",
     ),
     (
-        "D7",
-        "AvP de cada consulta na configuracao 13.5, que remove stopwords e foi a melhor configuracao anterior sem stemming.",
+        "I1",
+        "p-valor do teste-t pareado contra a melhor configuracao anterior. Valor menor que 0.05 costuma indicar diferenca estatisticamente significativa.",
     ),
     (
-        "E7",
-        "AvP de cada consulta na configuracao 13.4, sem remocao de stopwords e sem stemming.",
+        "J1",
+        "Indica se o experimento substituiu ou nao a melhor configuracao anterior.",
     ),
     (
-        "F7",
-        "Diferenca calculada como AvP 15.5 menos AvP 13.5. Positivo indica melhora com lematizacao; negativo indica piora.",
-    ),
-    (
-        "G7",
-        "Quantidade de documentos relevantes que apareceram entre os resultados recuperados da consulta.",
-    ),
-    (
-        "H7",
-        "Total de documentos relevantes existentes no arquivo de avaliacao para aquela consulta.",
+        "K1",
+        "Arquivo CSV com os resultados daquele experimento especifico.",
     ),
 ]
 
 
-def comentarios_planilha():
+def comentarios_planilha(comentarios=None):
+    comentarios = comentarios or COMENTARIOS
     comentarios_xml = []
 
-    for celula, texto in COMENTARIOS:
+    for celula, texto in comentarios:
         comentarios_xml.append(
             f'<comment ref="{celula}" authorId="0">'
             f'<text><r><t>{escape(texto)}</t></r></text>'
@@ -202,10 +205,11 @@ def posicao_celula(celula):
     return int(numeros) - 1, coluna - 1
 
 
-def desenho_comentarios():
+def desenho_comentarios(comentarios=None):
+    comentarios = comentarios or COMENTARIOS
     shapes = []
 
-    for i, (celula, _) in enumerate(COMENTARIOS, start=1):
+    for i, (celula, _) in enumerate(comentarios, start=1):
         row, col = posicao_celula(celula)
         shape_id = 1024 + i
         anchor = f"{col + 1}, 15, {row}, 10, {col + 4}, 15, {row + 4}, 10"
@@ -238,8 +242,10 @@ def rels_planilha():
 </Relationships>"""
 
 
-def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
+def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx", comentarios=None, mesclagens=None, celulas_negrito=None):
     rows_xml = []
+    mesclagens = mesclagens or []
+    celulas_negrito = celulas_negrito or set()
 
     for row_idx, linha in enumerate(linhas, start=1):
         cells = []
@@ -249,7 +255,7 @@ def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
             tem_formula = isinstance(valor, dict) and "formula" in valor
             numero = isinstance(valor, (int, float)) and not isinstance(valor, bool)
             tipo = "" if tem_formula or numero else ' t="inlineStr"'
-            estilo = estilo_celula(row_idx, col_idx, valor)
+            estilo = estilo_celula(row_idx, col_idx, valor, ref, celulas_negrito)
             estilo_xml = f' s="{estilo}"' if estilo else ""
             cells.append(f'<c r="{ref}"{estilo_xml}{tipo}>{valor_celula(valor)}</c>')
 
@@ -257,6 +263,11 @@ def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
         rows_xml.append(f'<row r="{row_idx}"{altura}>{"".join(cells)}</row>')
 
     cols_xml = larguras_colunas(linhas)
+    mesclagens_xml = ""
+
+    if mesclagens:
+        refs = "".join(f'<mergeCell ref="{escape(ref)}"/>' for ref in mesclagens)
+        mesclagens_xml = f'<mergeCells count="{len(mesclagens)}">{refs}</mergeCells>'
 
     sheet_xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -264,6 +275,7 @@ def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
   <sheetData>
     {''.join(rows_xml)}
   </sheetData>
+  {mesclagens_xml}
   <legacyDrawing r:id="rId2"/>
 </worksheet>"""
 
@@ -303,8 +315,8 @@ def gerar_planilha(linhas, arquivo_saida="avaliacao.xlsx"):
         xlsx.writestr("xl/workbook.xml", workbook_xml)
         xlsx.writestr("xl/_rels/workbook.xml.rels", workbook_rels)
         xlsx.writestr("xl/styles.xml", estilos_planilha())
-        xlsx.writestr("xl/comments1.xml", comentarios_planilha())
-        xlsx.writestr("xl/drawings/vmlDrawing1.vml", desenho_comentarios())
+        xlsx.writestr("xl/comments1.xml", comentarios_planilha(comentarios))
+        xlsx.writestr("xl/drawings/vmlDrawing1.vml", desenho_comentarios(comentarios))
         xlsx.writestr("xl/worksheets/_rels/sheet1.xml.rels", rels_planilha())
         xlsx.writestr("xl/worksheets/sheet1.xml", sheet_xml)
 

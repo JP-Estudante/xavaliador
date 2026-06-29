@@ -1,5 +1,6 @@
 # Ignorar banco do Xapian
 db/
+db_experimentos/
 
 # Ignorar cache do Python
 __pycache__/
