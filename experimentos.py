@@ -13,7 +13,7 @@ from pathlib import Path
 
 import xapian
 
-from scripts.gerar_planilha import gerar_planilha, p_valor_t_pareado
+from scripts.gerar_planilha import gerar_planilhas, p_valor_t_pareado
 from scripts.lematizador import lematizar_texto
 from scripts.stopwords_pt import stopwords_portugues
 
@@ -367,8 +367,47 @@ def salvar_avps_csv(avps_por_experimento):
 
 
 def gerar_planilha_resumo(resumo, melhor, baseline):
-    linhas = [
+    melhor_anterior = melhor["melhor_anterior"]
+    p_valor = melhor["p_valor_vs_melhor_anterior"]
+    decisao_final = (
+        "Maior MAP, mas sem diferença estatisticamente significativa"
+        if p_valor != "" and p_valor >= 0.05
+        else "Maior MAP com diferença estatisticamente significativa"
+    )
+
+    resumo_linhas = [
+        ["Item", "Valor", "Observação"],
+        ["Total de pré-processamentos testados", len(PRE_PROCESSAMENTOS), "Atende ao critério total do enunciado."],
+        ["Total de modelos testados", len(MODELOS), "Atende ao critério total do enunciado."],
+        ["Total de experimentos", len(PRE_PROCESSAMENTOS) * len(MODELOS), "Pré-processamentos x modelos."],
+        ["Baseline inicial", f"{baseline['preprocessamento']} + {baseline['modelo']}", "Primeira configuração avaliada."],
+        ["Melhor configuração anterior da vencedora", melhor_anterior, "Configuração usada no teste-t pareado da vencedora."],
+        ["Melhor configuração final", f"{melhor['preprocessamento']} + {melhor['modelo']}", "Escolhida pelo maior MAP."],
+        ["MAP da melhor configuração", melhor["MAP"], "Principal métrica de qualidade do ranking."],
+        ["MAP da melhor anterior", melhor["MAP_melhor_anterior"], "Referência estatística da configuração vencedora."],
+        ["p-valor vs melhor anterior", p_valor, "p >= 0,05 indica ausência de diferença estatisticamente significativa."],
+        ["Tempo de indexação", melhor["tempo_indexacao_s"], "Tempo para criar o índice da melhor configuração."],
+        ["Tempo total de consulta", melhor["tempo_consulta_total_s"], "Tempo para executar todas as consultas."],
+        ["Tempo médio de consulta", melhor["tempo_medio_consulta_s"], "Tempo total dividido pelas 150 consultas."],
+        ["Decisão", decisao_final, "Apresentar a vencedora por MAP sem afirmar ganho estatístico quando p >= 0,05."],
+    ]
+    resumo_cores = {}
+
+    for linha_idx in (2, 3, 4):
+        for col_idx in range(1, 4):
+            resumo_cores[f"{chr(64 + col_idx)}{linha_idx}"] = "azul"
+
+    for linha_idx in (7, 8):
+        for col_idx in range(1, 4):
+            resumo_cores[f"{chr(64 + col_idx)}{linha_idx}"] = "verde"
+
+    for linha_idx in (10, 14):
+        for col_idx in range(1, 4):
+            resumo_cores[f"{chr(64 + col_idx)}{linha_idx}"] = "amarelo"
+
+    ranking_linhas = [
         [
+            "Posição",
             "Pré-processamento",
             "Modelo",
             "MAP",
@@ -379,7 +418,7 @@ def gerar_planilha_resumo(resumo, melhor, baseline):
             "MAP da melhor anterior",
             "p-valor vs melhor anterior",
             "Decisão",
-            "Arquivo CSV",
+            "Ordem de execução",
         ],
     ]
 
@@ -389,38 +428,47 @@ def gerar_planilha_resumo(resumo, melhor, baseline):
             "Cada linha resume uma combinação de pré-processamento e modelo de recuperação.",
         ),
         (
-            "C1",
+            "D1",
             "MAP é a média das AvP das consultas. Quanto mais perto de 1, melhor o ranking.",
         ),
         (
-            "D1",
+            "E1",
             "Tempo gasto para criar o índice Xapian daquela técnica de pré-processamento.",
         ),
         (
             "F1",
-            "Tempo médio de consulta: tempo total de consulta dividido pelo número de consultas.",
+            "Tempo total gasto para executar todas as consultas.",
         ),
         (
             "G1",
+            "Tempo médio de consulta: tempo total de consulta dividido pelo número de consultas.",
+        ),
+        (
+            "H1",
             "Configuração que era a melhor antes de o experimento desta linha ser avaliado.",
         ),
         (
-            "I1",
+            "J1",
             "p-valor do teste-t pareado contra a melhor configuração anterior. Valor menor que 0,05 costuma indicar diferença estatisticamente significativa.",
         ),
         (
-            "J1",
+            "K1",
             "Indica se o experimento substituiu ou não a melhor configuração anterior.",
         ),
         (
-            "K1",
-            "Arquivo CSV com os resultados daquele experimento específico.",
+            "L1",
+            "Ordem original em que o experimento foi executado. Use esta coluna para ordenar da primeira configuração testada até a última.",
         ),
     ]
     vistos = set()
+    ordem_execucao = {
+        (item["preprocessamento"], item["modelo"]): posicao
+        for posicao, item in enumerate(resumo, start=1)
+    }
 
-    for item in sorted(resumo, key=lambda x: x["MAP"], reverse=True):
-        linhas.append([
+    for posicao, item in enumerate(sorted(resumo, key=lambda x: x["MAP"], reverse=True), start=1):
+        ranking_linhas.append([
+            posicao,
             item["preprocessamento"],
             item["modelo"],
             item["MAP"],
@@ -431,32 +479,98 @@ def gerar_planilha_resumo(resumo, melhor, baseline):
             item["MAP_melhor_anterior"],
             item["p_valor_vs_melhor_anterior"],
             item["decisao"],
-            item["arquivo_resultados"],
+            ordem_execucao[(item["preprocessamento"], item["modelo"])],
         ])
 
         if item["preprocessamento"] not in vistos:
             vistos.add(item["preprocessamento"])
             comentarios.append(
                 (
-                    f"A{len(linhas)}",
+                    f"B{len(ranking_linhas)}",
                     COMENTARIOS_PRE_PROCESSAMENTO[item["preprocessamento"]],
                 )
             )
 
-    linhas.extend([
+    ranking_linhas.extend([
         [],
         ["Melhor configuração", melhor["preprocessamento"], melhor["modelo"], melhor["MAP"]],
         ["Baseline", baseline["preprocessamento"], baseline["modelo"], baseline["MAP"]],
         ["Regra de comparação", "Cada experimento foi comparado com a melhor configuração encontrada antes dele.", "", ""],
     ])
 
-    linha_regra = len(linhas)
-    gerar_planilha(
-        linhas,
+    linha_regra = len(ranking_linhas)
+    ranking_cores = {}
+
+    for linha_idx in range(2, 52):
+        if linha_idx % 2 == 0:
+            for col_idx in range(1, 13):
+                ranking_cores[f"{chr(64 + col_idx)}{linha_idx}"] = "zebra"
+
+    for linha_idx, cor in ((53, "verde"), (54, "azul"), (55, "amarelo")):
+        for col_idx in range(1, 13):
+            ranking_cores[f"{chr(64 + col_idx)}{linha_idx}"] = cor
+
+    tecnicas_linhas = [
+        ["Técnica", "Objetivo", "Observação"],
+    ]
+
+    for config in PRE_PROCESSAMENTOS:
+        comentario = COMENTARIOS_PRE_PROCESSAMENTO[config["nome"]]
+        tecnica, objetivo = comentario.split(": ", 1)
+        observacao = ""
+
+        if config["id"] == "stopwords":
+            observacao = "Remove por lista linguística de palavras muito frequentes."
+        elif config["id"] == "termos_curtos":
+            observacao = "Remove por tamanho; captura ruídos que podem não estar na lista de stopwords."
+        elif config["id"] == "stemming":
+            observacao = "Foi a técnica da melhor configuração por MAP."
+
+        tecnicas_linhas.append([tecnica, objetivo, observacao])
+
+    tecnicas_cores = {}
+
+    for linha_idx in range(2, len(tecnicas_linhas) + 1):
+        if linha_idx % 2 == 0:
+            for col_idx in range(1, 4):
+                tecnicas_cores[f"{chr(64 + col_idx)}{linha_idx}"] = "zebra"
+
+    for linha_idx, linha in enumerate(tecnicas_linhas, start=1):
+        if linha[0] == "Stemming":
+            for col_idx in range(1, 4):
+                tecnicas_cores[f"{chr(64 + col_idx)}{linha_idx}"] = "verde"
+
+    gerar_planilhas(
+        [
+            {
+                "nome": "Resumo",
+                "linhas": resumo_linhas,
+                "celulas_negrito": {"A14"},
+                "celulas_cores": resumo_cores,
+                "larguras": [38, 44, 82],
+                "zoom": 100,
+            },
+            {
+                "nome": "Ranking",
+                "linhas": ranking_linhas,
+                "comentarios": comentarios,
+                "mesclagens": [f"B{linha_regra}:D{linha_regra}"],
+                "celulas_negrito": {f"A{linha_regra}"},
+                "celulas_cores": ranking_cores,
+                "larguras": [10, 30, 16, 12, 20, 22, 22, 36, 20, 20, 50, 18],
+                "auto_filtro": "A1:L51",
+                "zoom": 85,
+            },
+            {
+                "nome": "Técnicas",
+                "linhas": tecnicas_linhas,
+                "celulas_cores": tecnicas_cores,
+                "larguras": [30, 86, 62],
+                "auto_filtro": "A1:C11",
+                "zoom": 95,
+            },
+        ],
         SAIDA_DIR / "avaliacao.xlsx",
-        comentarios=comentarios,
-        mesclagens=[f"B{linha_regra}:D{linha_regra}"],
-        celulas_negrito={f"A{linha_regra}"},
     )
 
 
